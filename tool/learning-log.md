@@ -1,19 +1,19 @@
 # Tool Learning Log
 
-Tool: **X**
+Tool: Kaboom
 
-Project: **X**
+Project: Creating a plaformer space thememed game similar to mario and megaman
 
 ---
 
-X/X/X:
-* Text
+2/1/24:
+* Put a imported sprite of spider-man made 
 
 X/X/X:
 * Text
 
 
-<!-- 
+<!--
 * Links you used today (websites, videos, etc)
 * Things you tried, progress you made, etc
 * Challenges, a-ha moments, etc
