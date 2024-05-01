@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+1<!DOCTYPE html>
 <html>
     <head>
         <!-- Required meta tags -->
@@ -13,67 +13,102 @@
 
    kaboom()
 
-setGravity(1400)
+                scene("game", ({}))
 
-loadSprite("spiderman", "sprites/spiderman.jpeg")
-const spider =add([
-    sprite("spiderman"),
-    pos(100,5),
-    area(),
-    body(),
-])
-//  onKeyPress("space" , ()=>{
-//     spider.jump()
-//  })
+        setGravity(1200)
 
-// loadBean()
-// const bean = add ([
-//     sprite("bean"),
-//     pos(120, 80),
-//     area(),
-//     body(),
-// ])
+        loadSprite("spiderman", "sprites/spiderman.jpeg")
+        const spider =add([
+            sprite("spiderman"),
+            pos(10,5),
+            area(),
+            body(),
+            health(5),
+            scale(0.39),
+        ])
+        //  onKeyPress("space" , ()=>{
+        //     spider.jump()
+        //  })
 
-onKeyPress("space" , () => {
-    if (spider.isGrounded()) {
-    spider.jump()
-    }
-})
+        // loadBean()
+        // const bean = add ([
+        //     sprite("bean"),
+        //     pos(120, 80),
+        //     area(),
+        //     body(),
+        // ])
 
-add([
-    rect(width(), 48),
-    pos(0, height() - 48),
-    outline(4),
-    area(),
-    body({ isStatic: true }),
-    color(200, 300, 400),
-])
+        onKeyPress("space" , () => {
+            if (spider.isGrounded()) {
+            spider.jump()
+            }
+        })
 
-loop(1, () => {
-    // add tree
-    add([
-        rect(48, 64),
-        area(),
-        outline(4),
-        pos(width(), height() - 48),
-        anchor("botleft"),
-        color(255, 180, 255),
-        move(LEFT, 240),
-        "tree", // add a tag here
-    ]);
-});
+        add([
+            rect(width(), 48),
+            pos(0, height() - 48),
+            outline(4),
+            area(),
+            body({ isStatic: true }),
+            color(200, 300, 400),
+        ])
 
-spider.onCollide("tree", () => {
-    addKaboom(spider.pos);
-    shake();
-});
+        loop(1, () => {
+            // add tree
+            add([
+                rect(48, 64),
+                area(),
+                outline(4),
+                pos(width(), height() - 48),
+                anchor("botleft"),
+                color(255, 180, 255),
+                move(LEFT, 240),
+                "tree", // add a tag here
+            ]);
+        });
+
+        spider.onCollide("tree" , "bad ", () => {
+            addKaboom(spider.pos);
+            shake();
+            spider.hurt(1)
+            bad.hurt(1)
+            spider.on("death", () =>{
+                destroy(spider)
+                go("lose")
+            })
+
+            scene("lose" , () =>{
+                add([
+                    sprite("spider"),
+                    text("you lose"),
+                    pos(12)
+                ])
+            })
+        });
+                                                            
+    onKeyPress(start);
+
+function start(){
+    go("game")
+}
+
+
+
+
+// spider.onCollide("bad" , (bad) => {
+//     spider.hurt(1)
+//     bad.hurt(1)
+// })
+
+//
+
             </script>
         <style>
             /* CSS */
 
         </style>
 
-        <title>Title</title>
+        <title>Kaboom</title>
     </head>
     <body>
         <!-- HTML -->
