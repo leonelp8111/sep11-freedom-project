@@ -5,25 +5,323 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="style.css" rel="stylesheet" type="text/css" />
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <script type="module">
+
+            // import kaboom lib
+            import kaboom from "https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs";
+
+
+            kaboom({
+	background: [183, 183, 183],
+})
+
+// load assets
+loadSprite("bean", "sprites/spiderman.jpeg")
+loadSprite("block", "sprites/marioblock.jpeg")
+loadSprite("spike", "sprites/spike.png")
+loadSprite("coin", "sprites/coin.png")
+loadSprite("alien", "/sprites/alien.jpg")
+loadSprite("portal", "/sprites/portal.png")
+
+// add([
+//   sprite("bg", { width: 1800, height: 1100 })
+// ])
+
+setGravity(1200)
+
+// custom component controlling enemy patrol movement
+function patrol(speed = 60, dir = 1) {
+	return {
+		id: "patrol",
+		require: [ "pos", "area" ],
+		add() {
+			this.on("collide", (obj, col) => {
+				if (col.isLeft() || col.isRight()) {
+					dir = -dir
+				}
+			})
+		},
+		update() {
+			this.move(speed * dir, 0)
+		},
+	}
+}
+
+
+
+// define some constants
+const JUMP_FORCE = 1050
+const MOVE_SPEED = 480
+const FALL_DEATH = 2400
+const BULLET_SPEED = 1200
+
+const LEVELS = [
+	[ "===========================================",
+		"                       =                  =",
+		"                       =                  =",
+		"                       =                  =",
+		"                       =                  =",
+		"                       =                  =",
+		"                                          =",
+		"                                          =",
+		"                                           ",
+		"   ^^  $$     $>  $    ^   $$       > >   @",
+		"==========   ======   ===========   ===========",
+	],
+	[
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"            $$             ",
+		"         =====        =    ",
+		"                      =    ",
+		"                      =    ",
+		"       ^^   >  = >    =   @",
+		"===========================",
+	],
+	[
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"        >>>>>>>>>>>>       ",
+		"        >>>>>>>>>>>>       ",
+		"        >>>>>>>>>>>>      @",
+		"===========================",
+	],
+]
+
+// define what each symbol means in the level graph
+const levelConf = {
+	tileWidth: 110,
+	tileHeight: 110,
+	tiles: {
+		"=": () => [
+			sprite("block"),
+			area(),
+			scale(0.3),
+			body({ isStatic: true }),
+			anchor("bot"),
+			offscreen({ hide: true }),
+			"platform",
+		],
+		"$": () => [
+			sprite("coin"),
+			area(),
+			scale(0.2),
+			pos(0, -9),
+			anchor("bot"),
+			offscreen({ hide: true }),
+			"coin",
+		],
+		"^": () => [
+			sprite("spike"),
+			area(),
+			scale(0.2),
+			body({ isStatic: true }),
+			anchor("bot"),
+			offscreen({ hide: true }),
+			"danger",
+		],
+		">": () => [
+			sprite("alien"),
+			area(),
+			anchor("bot"),
+			body(),
+			scale(0.4),
+			patrol(),
+			offscreen({ hide: true }),
+			"enemy",
+		],
+		"@": () => [
+			sprite("portal"),
+      scale(0.5),
+			area({ scale: 0.5 }),
+			anchor("bot"),
+			pos(0, -12),
+			offscreen({ hide: true }),
+			"portal",
+		],
+	},
+}
+const enemy = get("enemy")
+scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
+
+	const level = addLevel(LEVELS[levelId ?? 0], levelConf)
+
+	// define player object
+	const player = add([
+		sprite("bean"),
+		pos(0, 0),
+		area(),
+		scale(0.2),
+		body(),
+		anchor("bot"),
+	])
+
+	player.onUpdate(() => {
+		// center camera to player
+		camPos(player.pos)
+		// check fall death
+		if (player.pos.y >= FALL_DEATH) {
+			go("lose")
+		}
+	})
+
+	player.onBeforePhysicsResolve((collision) => {
+		if (collision.target.is(["platform", "soft"]) && player.isJumping()) {
+			collision.preventResolution()
+		}
+	})
+
+	player.onPhysicsResolve(() => {
+		camPos(player.pos)
+	})
+
+	// if player onCollide with any obj with "danger" tag, lose
+	player.onCollide("danger", () => {
+		go("lose")
+	})
+
+	player.onCollide("portal", () => {
+		if (levelId + 1 < LEVELS.length) {
+			go("game", {
+				levelId: levelId + 1,
+				coins: coins,
+			})
+		} else {
+			go("win")
+		}
+	})
+
+	player.onCollide("enemy", (e, col) => {
+		// if it's not from the top, die
+		if (!col.isBottom()) {
+			go("lose")
+		}
+	})
+
+
+
+	player.onCollide("coin", (c) => {
+		destroy(c)
+		coins += 1
+		coinsLabel.text = coins
+	})
+
+	const coinsLabel = add([
+		text(coins),
+		pos(24, 24),
+		fixed(),
+	])
+
+	function jump() {
+		if (player.isGrounded()) {
+			player.jump(JUMP_FORCE)
+		}
+	}
+
+	// jump with space
+	onKeyPress("w", jump)
+
+	onKeyDown("a", () => {
+		player.move(-MOVE_SPEED, 0)
+	})
+
+	onKeyDown("d", () => {
+		player.move(MOVE_SPEED, 0)
+	})
+
+	onKeyPress("s", () => {
+		player.weight = 3
+	})
+
+	onKeyRelease("s", () => {
+		player.weight = 1
+	})
+
+
+	onKeyPress("f", () => {
+		setFullscreen(!isFullscreen())
+	})
+
+onKeyPress("m", () => {
+	spawnBullet(player.pos.sub(16, 0))
+	spawnBullet(player.pos)
+})
+
+// enemy.onCollide("bullet", (bullet) => {
+// 	destroy(bullet)
+// 	destroy(enemy)
+// 	addKaboom(bullet.pos)
+// })
+
+	onCollide("bullet", "enemy", (b, e) => {
+		destroy(e)
+		destroy(b)
+		addKaboom(b.pos)
+	})
+
+function spawnBullet(p) {
+	add([
+		rect(12, 10),
+		area(),
+		pos(p),
+		anchor("center"),
+		color(127, 127, 255),
+		outline(2),
+		move(RIGHT, BULLET_SPEED),
+		offscreen({ destroy: true }),
+		"bullet",
+	])
+}
+
+})
+
+scene("lose", () => {
+	add([
+		text("You Lose"),
+	])
+	onKeyPress(() => go("game"))
+})
+
+scene("win", () => {
+	add([
+		text("You Win"),
+	])
+	onKeyPress(() => go("game"))
+})
+
+go("game")
+
+
+
+
+
+
+
+
+            </script>
         <style>
             /* CSS */
-            
+
         </style>
-        
-        <title>Title</title>
+
+        <title>Kaboom</title>
     </head>
     <body>
         <!-- HTML -->
-        
-        
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- <script src="script.js"></script> -->
+
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             // JS
-            
-            
+
+
         </script>
     </body>
 </html>
