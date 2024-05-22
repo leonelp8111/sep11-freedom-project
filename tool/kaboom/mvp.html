@@ -12,17 +12,16 @@
             import kaboom from "https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs";
 
 
-kaboom({
-width:1800,
-  height:1100,
-
+            kaboom({
+	background: [183, 183, 183],
 })
-// loadSprite("bg", "sprites/space.png")
-loadSprite("spiderman", "sprites/spiderman.jpeg")
-loadSprite("block", "sprites/marioblock.jpeg")
-loadSprite("spike", "/sprites/spike.png")
-loadSprite("coin", "/sprites/coin.png")
-loadSound("score", "/sounds/score.mp3")
+
+// load assets
+loadSprite("bg", "sprites/space.png")
+loadSprite("bean", "sprites/spiderman.png")
+loadSprite("block", "/sprites/marioblock.webp")
+loadSprite("spike", "/sprites/spike2.png")
+loadSprite("coin", "/sprites/coin1.png")
 loadSprite("alien", "/sprites/alien.jpg")
 loadSprite("portal", "/sprites/portal.png")
 
@@ -30,196 +29,292 @@ loadSprite("portal", "/sprites/portal.png")
 //   sprite("bg", { width: 1800, height: 1100 })
 // ])
 
-const SPEED = 480
-const FALL_DEATH = -100
-const ENEMY_SPEED = 160
-setGravity(1000)
-const BULLET_SPEED = 1200
+setGravity(1200)
 
+// custom component controlling enemy patrol movement
 function patrol(speed = 60, dir = 1) {
-  return {
-    id: "patrol",
-    require: [ "pos", "area" ],
-    add() {
-      this.on("collide", (obj, col) => {
-        if (col.isLeft() || col.isRight()) {
-          dir = -dir
-        }
-      })
-    },
-    update() {
-      this.move(speed * dir, 0)
-    },
-  }
+	return {
+		id: "patrol",
+		require: [ "pos", "area" ],
+		add() {
+			this.on("collide", (obj, col) => {
+				if (col.isLeft() || col.isRight()) {
+					dir = -dir
+				}
+			})
+		},
+		update() {
+			this.move(speed * dir, 0)
+		},
+	}
 }
 
 
+
+// define some constants
+const JUMP_FORCE = 1050
+const MOVE_SPEED = 480
+const FALL_DEATH = 2400
+const BULLET_SPEED = 1200
+
 const LEVELS = [
-      [ "=========================================",
-        "                     =                  =",
-        "                     =                  =",
-        "                     =                  =",
-        "                     =                  =",
-        "                     =                  =",
-        "                     =                  =",
-        "                                        =",
-        "                                        =",
-        "@  ^^  $$     $>   $    ^   $$       > >  0",
-        "=========  ======  ===========  ===========",
-      ],
-       [
-         "=========================================",
-           "                     =                  =",
-           "                     =                  =",
-           "                     =                  =",
-           "                     =                  =",
-           "                     =                  =",
-           "                     =                  =",
-           "                                        =",
-           "                                        =",
-           "@  ^^  $$     $>   $    ^   $$       > >  0",
-           "=========  ======  ===========  ===========",,
-       ],
-  ]
-   scene("game", ({ levelIdx, score }) => {
+	[ "===========================================",
+		"                       =                  =",
+		"                       =                  =",
+		"                       =                  =",
+		"                       =                  =",
+		"                       =                  =",
+		"                                          =",
+		"                                          =",
+		"                                          =",
+		"   ^^  $$     $>   $    ^   $$       > >  @",
+		"==========  ======  ===========  ===========",
+	],
+	[
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"            $$             ",
+		"         =====        =    ",
+		"                      =    ",
+		"                      =    ",
+		"       ^^      = >    =   @",
+		"===========================",
+	],
+	[
+		"     $    $    $    $     $",
+		"     $    $    $    $     $",
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"                           ",
+		"                          @",
+		"===========================",
+	],
+]
 
-  const level = addLevel(LEVELS[levelIdx || 0],{
+// define what each symbol means in the level graph
+const levelConf = {
+	tileWidth: 110,
+	tileHeight: 110,
+	tiles: {
+		"=": () => [
+			sprite("block"),
+			area(),
+			scale(0.3),
+			body({ isStatic: true }),
+			anchor("bot"),
+			offscreen({ hide: true }),
+			"platform",
+		],
+		"$": () => [
+			sprite("coin"),
+			area(),
+			scale(0.2),
+			pos(0, -9),
+			anchor("bot"),
+			offscreen({ hide: true }),
+			"coin",
+		],
+		"^": () => [
+			sprite("spike"),
+			area(),
+			scale(0.2),
+			body({ isStatic: true }),
+			anchor("bot"),
+			offscreen({ hide: true }),
+			"danger",
+		],
+		">": () => [
+			sprite("alien"),
+			area(),
+			anchor("bot"),
+			body(),
+			scale(0.3),
+			patrol(),
+			offscreen({ hide: true }),
+			"enemy",
+		],
+		"@": () => [
+			sprite("portal"),
+			area({ scale: 0.5 }),
+			anchor("bot"),
+			pos(0, -12),
+			offscreen({ hide: true }),
+			"portal",
+		],
+	},
+}
+const enemy = get("enemy")
+scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 
-        tileWidth: 110,
-        tileHeight: 110,
-        tiles: {
-          "@": () => [
-            sprite("spiderman"),
-            scale(.2),
-            area(),
-            body(),
-            anchor("bot"),
-            "spider",
-          ],
-          "=": () => [
-            sprite("block"),
-            area(),
-            body({ isStatic: true }),
-            anchor("bot"),
-            scale(0.3),
-          ],
-          "^": () => [
-            sprite("spike"),
-            area({scale:0.5}),
-            anchor("bot"),
-            "danger",
-            scale(0.2),
-          ],
-          "$": () => [
-            sprite("coin"),
-            area(),
-            anchor("bot"),
-            "coin",
-            scale(0.2),
-          ],
-          ">": () => [
-            sprite("alien"),
-            area(),
-            anchor("bot"),
-            body(),
-            patrol(),
-            offscreen({ hide: true }),
-            "enemy",
-          ],
-          "0": () => [
-            sprite("portal"),
-            area(),
-            anchor("bot"),
-            body(),
-            offscreen({ hide: true }),
-            "portal",
-          ],
-        },
-      })
+	// const background = add([
+	// 	sprite("bg", { width: 1800, height: 1100 }),
+	// 	scale(1),
+	// ])
+	// add level to scene
+	const level = addLevel(LEVELS[levelId ?? 0], levelConf)
 
-      const spider = level.get("spider")[0]
-      const alien = level.get("enemy")[0]
-      // Movements
-      onKeyPress("w", () => {
-        if (spider.isGrounded()) {
-          spider.jump()
-        }
-      })
+	// define player object
+	const player = add([
+		sprite("bean"),
+		pos(0, 0),
+		area(),
+		scale(0.2),
+	// 	// makes it fall to gravity and jumpable
+		body(),
+		anchor("bot"),
+	])
 
-      onKeyDown("a", () => {
-        spider.move(-SPEED, 0)
-      })
+	// action() runs every frame
+	player.onUpdate(() => {
+		// center camera to player
+		camPos(player.pos)
+		// check fall death
+		if (player.pos.y >= FALL_DEATH) {
+			go("lose")
+		}
+	})
 
-      onKeyDown("d", () => {
-        spider.move(SPEED, 0)
-      })
+	player.onBeforePhysicsResolve((collision) => {
+		if (collision.target.is(["platform", "soft"]) && player.isJumping()) {
+			collision.preventResolution()
+		}
+	})
 
-      spider.onCollide("danger", () => {
-        spider.pos = level.tile2Pos(0, 8)
-        go("lose")
-      })
+	player.onPhysicsResolve(() => {
+		// Set the viewport center to player.pos
+		camPos(player.pos)
+	})
 
-      spider.onCollide("coin", (coin) => {
-        destroy(coin)
-        play("score")
-        score++
-        scoreLabel.text = score
-      })
+	// if player onCollide with any obj with "danger" tag, lose
+	player.onCollide("danger", () => {
+		go("lose")
+	})
+
+	player.onCollide("portal", () => {
+		if (levelId + 1 < LEVELS.length) {
+			go("game", {
+				levelId: levelId + 1,
+				coins: coins,
+			})
+		} else {
+			go("win")
+		}
+	})
+
+	// player.onGround((l) => {
+	// 	if (l.is("enemy")) {
+	// 		player.jump(JUMP_FORCE * 1.5)
+	// 		destroy(l)
+	// 		addKaboom(player.pos)
+	// 	}
+	// })
+
+	player.onCollide("enemy", (e, col) => {
+		// if it's not from the top, die
+		if (!col.isBottom()) {
+			go("lose")
+		}
+	})
 
 
-      spider.onCollide("enemy", (enemy) =>{
-        // spider.pos = level.tile2Pos(0, 8)
-        go("lose")
-      });
 
-      const scoreLabel = add([
-        text(score),
-        pos(12),
-      ])
+	player.onCollide("coin", (c) => {
+		destroy(c)
+		coins += 1
+		coinsLabel.text = coins
+	})
 
-      spider.onUpdate(() => {
-        camPos(spider.pos)
-      })
+	const coinsLabel = add([
+		text(coins),
+		pos(24, 24),
+		fixed(),
+	])
+
+	function jump() {
+		// these 2 functions are provided by body() component
+		if (player.isGrounded()) {
+			player.jump(JUMP_FORCE)
+		}
+	}
+
+	// jump with space
+	onKeyPress("w", jump)
+
+	onKeyDown("a", () => {
+		player.move(-MOVE_SPEED, 0)
+	})
+
+	onKeyDown("d", () => {
+		player.move(MOVE_SPEED, 0)
+	})
+
+	onKeyPress("s", () => {
+		player.weight = 3
+	})
+
+	onKeyRelease("s", () => {
+		player.weight = 1
+	})
+
+
+	onKeyPress("f", () => {
+		setFullscreen(!isFullscreen())
+	})
 
 onKeyPress("m", () => {
-        // spawnBullet(spider.pos.sub(16, 0))
-        spawnBullet(spider.pos.add(16, 0))
-      })
-
-alien.onCollide("bullet", (bullet) => {
-  destroy(bullet)
-  destroy(alien)
-  addKaboom(bullet.pos)
+	// spawnBullet(spider.pos.sub(16, 0))
+	spawnBullet(player.pos)
 })
 
+// enemy.onCollide("bullet", (bullet) => {
+// 	destroy(bullet)
+// 	destroy(enemy)
+// 	addKaboom(bullet.pos)
+// })
+
+	onCollide("bullet", "enemy", (b, e) => {
+		destroy(e)
+		destroy(b)
+		addKaboom(b.pos)
+	})
+
+function spawnBullet(p) {
+	add([
+		rect(12, 10),
+		area(),
+		pos(p),
+		anchor("center"),
+		color(127, 127, 255),
+		outline(2),
+		move(RIGHT, BULLET_SPEED),
+		offscreen({ destroy: true }),
+		"bullet",
+	])
+}
 
 })
 
-  scene("lose", () => {
+scene("lose", () => {
+	add([
+		text("You Lose"),
+	])
+	onKeyPress(() => go("game"))
+})
 
-        add([
-          text("You Lose"),
-          pos(12),
-        ])
-      })
+scene("win", () => {
+	add([
+		text("You Win"),
+	])
+	onKeyPress(() => go("game"))
+})
 
+go("game")
 
-
-
-
-      function spawnBullet(p) {
-        add([
-          rect(12, 10),
-          area(),
-          pos(p),
-          anchor("center"),
-          color(127, 127, 255),
-          outline(2),
-          move(RIGHT, BULLET_SPEED),
-          offscreen({ destroy: true }),
-          "bullet",
-        ])
-      }
 
 
 
