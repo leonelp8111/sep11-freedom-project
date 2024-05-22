@@ -17,11 +17,10 @@
 })
 
 // load assets
-loadSprite("bg", "sprites/space.png")
-loadSprite("bean", "sprites/spiderman.png")
-loadSprite("block", "/sprites/marioblock.webp")
-loadSprite("spike", "/sprites/spike2.png")
-loadSprite("coin", "/sprites/coin1.png")
+loadSprite("bean", "sprites/spiderman.jpeg")
+loadSprite("block", "sprites/marioblock.jpeg")
+loadSprite("spike", "sprites/spike.png")
+loadSprite("coin", "sprites/coin.png")
 loadSprite("alien", "/sprites/alien.jpg")
 loadSprite("portal", "/sprites/portal.png")
 
@@ -66,9 +65,9 @@ const LEVELS = [
 		"                       =                  =",
 		"                                          =",
 		"                                          =",
-		"                                          =",
-		"   ^^  $$     $>   $    ^   $$       > >  @",
-		"==========  ======  ===========  ===========",
+		"                                           ",
+		"   ^^  $$     $>  $    ^   $$       > >   @",
+		"==========   ======   ===========   ===========",
 	],
 	[
 		"                           ",
@@ -80,18 +79,18 @@ const LEVELS = [
 		"         =====        =    ",
 		"                      =    ",
 		"                      =    ",
-		"       ^^      = >    =   @",
+		"       ^^   >  = >    =   @",
 		"===========================",
 	],
 	[
-		"     $    $    $    $     $",
-		"     $    $    $    $     $",
 		"                           ",
 		"                           ",
 		"                           ",
 		"                           ",
 		"                           ",
-		"                          @",
+		"        >>>>>>>>>>>>       ",
+		"        >>>>>>>>>>>>       ",
+		"        >>>>>>>>>>>>      @",
 		"===========================",
 	],
 ]
@@ -133,13 +132,14 @@ const levelConf = {
 			area(),
 			anchor("bot"),
 			body(),
-			scale(0.3),
+			scale(0.4),
 			patrol(),
 			offscreen({ hide: true }),
 			"enemy",
 		],
 		"@": () => [
 			sprite("portal"),
+      scale(0.5),
 			area({ scale: 0.5 }),
 			anchor("bot"),
 			pos(0, -12),
@@ -151,11 +151,6 @@ const levelConf = {
 const enemy = get("enemy")
 scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 
-	// const background = add([
-	// 	sprite("bg", { width: 1800, height: 1100 }),
-	// 	scale(1),
-	// ])
-	// add level to scene
 	const level = addLevel(LEVELS[levelId ?? 0], levelConf)
 
 	// define player object
@@ -164,12 +159,10 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 		pos(0, 0),
 		area(),
 		scale(0.2),
-	// 	// makes it fall to gravity and jumpable
 		body(),
 		anchor("bot"),
 	])
 
-	// action() runs every frame
 	player.onUpdate(() => {
 		// center camera to player
 		camPos(player.pos)
@@ -186,7 +179,6 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 	})
 
 	player.onPhysicsResolve(() => {
-		// Set the viewport center to player.pos
 		camPos(player.pos)
 	})
 
@@ -205,14 +197,6 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 			go("win")
 		}
 	})
-
-	// player.onGround((l) => {
-	// 	if (l.is("enemy")) {
-	// 		player.jump(JUMP_FORCE * 1.5)
-	// 		destroy(l)
-	// 		addKaboom(player.pos)
-	// 	}
-	// })
 
 	player.onCollide("enemy", (e, col) => {
 		// if it's not from the top, die
@@ -236,7 +220,6 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 	])
 
 	function jump() {
-		// these 2 functions are provided by body() component
 		if (player.isGrounded()) {
 			player.jump(JUMP_FORCE)
 		}
@@ -267,7 +250,7 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 	})
 
 onKeyPress("m", () => {
-	// spawnBullet(spider.pos.sub(16, 0))
+	spawnBullet(player.pos.sub(16, 0))
 	spawnBullet(player.pos)
 })
 
